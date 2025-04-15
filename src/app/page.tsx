@@ -11,7 +11,7 @@ export default function Home() {
 	const [targetMRNAData, setTargetMRNAData] = useState<string>('');
 	const [loadedFileData, setLoadedFileData] = useState<string>('');
 	const [targetPosition, setTargetPosition] = useState<string>('');
-
+	const [possibleSequences, setPossibleSequences] = useState<string[]>([]);
 	useEffect(() => {
 		if (targetMRNAFile) {
 			targetMRNAFile.text().then(setLoadedFileData);
@@ -32,6 +32,11 @@ export default function Home() {
 				isNaN(parseInt(targetPosition)) ||
 				parseInt(targetPosition) > mrnaData.length ||
 				!mrnaData[parseInt(targetPosition) - 1]
+		},
+		3: {
+			error:
+				possibleSequences.length === 0 ||
+				possibleSequences.filter((s, i) => possibleSequences.indexOf(s) !== i).length > 0
 		}
 	};
 
@@ -109,13 +114,49 @@ export default function Home() {
 					<button
 						className='bg-blue-500 text-white py-1 px-2'
 						onClick={() => {
-							const possibleSequences = analyzePossiblePNASequences(mrnaData, parseInt(targetPosition));
-							console.log(possibleSequences);
+							setPossibleSequences(analyzePossiblePNASequences(mrnaData, parseInt(targetPosition)));
 						}}
 					>
 						Analyze
 					</button>
 				</div>
+				{possibleSequences.length > 0 && (
+					<div className='mt-4'>
+						{possibleSequences.map((sequence, index) => (
+							<div key={index} className='border-b last:border-b-0 flex items-center'>
+								{sequence}{' '}
+								{possibleSequences.filter((s) => s === sequence).length > 1 &&
+									`(duplicate: ${possibleSequences.filter((s) => s === sequence).length})`}
+								<button
+									className='ml-auto bg-red-500 text-white px-1'
+									onClick={() => {
+										setPossibleSequences(
+											possibleSequences.filter(
+												(s, i) => !(s === sequence && i === possibleSequences.findIndex((item) => item === sequence))
+											)
+										);
+									}}
+								>
+									Remove
+								</button>
+							</div>
+						))}
+					</div>
+				)}
+				{possibleSequences.length > 0 &&
+					possibleSequences.filter((s, i) => possibleSequences.indexOf(s) !== i).length > 0 && (
+						<ErrorMessage>
+							There are duplicate PNA sequences.
+							<button
+								className='bg-red-500 text-white py-1 px-2 ml-2'
+								onClick={() => {
+									setPossibleSequences([...new Set(possibleSequences)]);
+								}}
+							>
+								Remove Duplicates
+							</button>
+						</ErrorMessage>
+					)}
 			</Step>
 		</div>
 	);
