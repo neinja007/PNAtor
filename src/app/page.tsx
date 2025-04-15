@@ -4,6 +4,7 @@ import ErrorMessage from '@/components/error';
 import Step from '@/components/step';
 import SuccessMessage from '@/components/success';
 import { analyzePossiblePNASequences } from '@/utils/analyze-possible-pna-sequences';
+import calculatePnaRnaTm from '@/utils/calculate-pna-rna-tm';
 import { useEffect, useState } from 'react';
 
 export default function Home() {
@@ -123,23 +124,33 @@ export default function Home() {
 				{possibleSequences.length > 0 && (
 					<div className='mt-4'>
 						{possibleSequences.map((sequence, index) => (
-							<div key={index} className='border-b last:border-b-0 flex items-center'>
-								{sequence}{' '}
-								{possibleSequences.filter((s) => s === sequence).length > 1 &&
-									`(duplicate: ${possibleSequences.filter((s) => s === sequence).length})`}
-								<button
-									className='ml-auto bg-red-500 text-white px-1'
-									onClick={() => {
-										setPossibleSequences(
-											possibleSequences.filter(
-												(s, i) => !(s === sequence && i === possibleSequences.findIndex((item) => item === sequence))
-											)
-										);
-									}}
-								>
-									Remove
-								</button>
-							</div>
+							<table key={index} className='w-full border-collapse'>
+								<thead>
+									<tr className='border-b last:border-b-0'>
+										<td className='py-1 px-2'>{sequence}</td>
+										<td className='py-1 px-2'>{calculatePnaRnaTm(sequence)}°C</td>
+										<td className='py-1 px-2'>
+											{possibleSequences.filter((s) => s === sequence).length > 1 &&
+												`(duplicate: ${possibleSequences.filter((s) => s === sequence).length})`}
+										</td>
+										<td className='py-1 px-2 text-right'>
+											<button
+												className='bg-red-500 text-white px-1'
+												onClick={() => {
+													setPossibleSequences(
+														possibleSequences.filter(
+															(s, i) =>
+																!(s === sequence && i === possibleSequences.findIndex((item) => item === sequence))
+														)
+													);
+												}}
+											>
+												Remove
+											</button>
+										</td>
+									</tr>
+								</thead>
+							</table>
 						))}
 					</div>
 				)}
