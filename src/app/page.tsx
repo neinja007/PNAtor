@@ -5,6 +5,7 @@ import Step from '@/components/step';
 import SuccessMessage from '@/components/success';
 import { analyzePossiblePNASequences } from '@/utils/analyze-possible-pna-sequences';
 import calculatePnaRnaTm from '@/utils/calculate-pna-rna-tm';
+import { checkSequenceConstraints } from '@/utils/check-sequence-constraints';
 import { useEffect, useState } from 'react';
 
 export default function Home() {
@@ -40,6 +41,13 @@ export default function Home() {
 			error:
 				possibleSequences.length === 0 ||
 				possibleSequences.filter((s, i) => possibleSequences.indexOf(s) !== i).length > 0
+		},
+		4: {
+			error:
+				validSequences.filter((s) => {
+					const constraint = checkSequenceConstraints(s);
+					return constraint;
+				}).length > 0 || validSequences.length === 0
 		}
 	};
 
@@ -118,6 +126,7 @@ export default function Home() {
 						className='bg-blue-500 text-white py-1 px-2'
 						onClick={() => {
 							setPossibleSequences(analyzePossiblePNASequences(mrnaData, parseInt(targetPosition)));
+							setValidSequences(analyzePossiblePNASequences(mrnaData, parseInt(targetPosition)));
 						}}
 					>
 						Analyze
@@ -171,41 +180,45 @@ export default function Home() {
 							</button>
 						</ErrorMessage>
 					)}
-				{!steps[3].error && <SuccessMessage>There are {possibleSequences.length} PNA sequences.</SuccessMessage>}
+				{!steps[3].error && (
+					<SuccessMessage>
+						There are {possibleSequences.length} possible PNA sequence{possibleSequences.length === 1 ? '' : 's'}.
+					</SuccessMessage>
+				)}
 			</Step>
 			<Step activeStep={activeStep} step={4}>
 				<div className='flex justify-between'>
 					<b>Step 4: Apply PNA sequence constraints.</b>
+					<button
+						className='bg-blue-500 text-white py-1 px-2'
+						onClick={() => {
+							setValidSequences(
+								validSequences.filter((s) => {
+									const constraint = checkSequenceConstraints(s);
+									return !constraint;
+								})
+							);
+						}}
+					>
+						Remove invalid sequences
+					</button>
 				</div>
 				<div className='mt-4'>
-					{possibleSequences.map((sequence, index) => (
+					{validSequences.map((sequence, index) => (
 						<table key={index} className='w-full border-collapse'>
 							<thead>
 								<tr className='border-b last:border-b-0 grid grid-cols-8 py-1'>
 									<td className='col-span-2'>{sequence}</td>
 									<td className='col-span-5'>
 										{(() => {
-											const purines = sequence.split('').filter((base) => base === 'A' || base === 'G').length;
-											const purinePercentage = (purines / sequence.length) * 100;
-
-											const purineStretch = sequence.match(/[AG]{7,}/);
-											if (purineStretch) {
+											const constraint = checkSequenceConstraints(sequence);
+											if (constraint) {
 												return (
-													<span className='text-red-500'>long purine stretch ({purineStretch[0].length} bases)</span>
+													<span className={constraint.severity === 'error' ? 'text-red-500' : 'text-orange-500'}>
+														{constraint.message}
+													</span>
 												);
 											}
-
-											if (purinePercentage > 50) {
-												return <span className='text-orange-500'>high purine content</span>;
-											}
-
-											const gContent = sequence.split('').filter((base) => base === 'G').length;
-											const gPercentage = (gContent / sequence.length) * 100;
-
-											if (gPercentage > 35) {
-												return <span className='text-orange-500'>high G content ({gPercentage.toFixed(1)}%)</span>;
-											}
-
 											return null;
 										})()}
 									</td>
@@ -229,6 +242,13 @@ export default function Home() {
 						</table>
 					))}
 				</div>
+				{steps[4].error ? (
+					<ErrorMessage>There are invalid PNA sequences. Remove them to continue.</ErrorMessage>
+				) : (
+					<SuccessMessage>
+						There are {validSequences.length} valid PNA sequence{validSequences.length === 1 ? '' : 's'}.
+					</SuccessMessage>
+				)}
 			</Step>
 		</div>
 	);
