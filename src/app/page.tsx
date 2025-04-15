@@ -1,103 +1,122 @@
-import Image from "next/image";
+'use client';
+
+import ErrorMessage from '@/components/error';
+import Step from '@/components/step';
+import SuccessMessage from '@/components/success';
+import { analyzePossiblePNASequences } from '@/utils/analyze-possible-pna-sequences';
+import { useEffect, useState } from 'react';
 
 export default function Home() {
-  return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm/6 text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-[family-name:var(--font-geist-mono)] font-semibold">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+	const [targetMRNAFile, setTargetMRNAFile] = useState<File | null>(null);
+	const [targetMRNAData, setTargetMRNAData] = useState<string>('');
+	const [loadedFileData, setLoadedFileData] = useState<string>('');
+	const [targetPosition, setTargetPosition] = useState<string>('');
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
-        </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
-    </div>
-  );
+	useEffect(() => {
+		if (targetMRNAFile) {
+			targetMRNAFile.text().then(setLoadedFileData);
+		}
+	}, [targetMRNAFile]);
+
+	const mrnaData = (targetMRNAFile ? loadedFileData : targetMRNAData).toUpperCase();
+
+	const steps = {
+		1: {
+			error:
+				!mrnaData || mrnaData.length === 0 || (targetMRNAData && targetMRNAFile) || !/^[acgtACGT\s]+$/.test(mrnaData)
+		},
+		2: {
+			error:
+				!targetPosition ||
+				parseInt(targetPosition) < 1 ||
+				isNaN(parseInt(targetPosition)) ||
+				parseInt(targetPosition) > mrnaData.length ||
+				!mrnaData[parseInt(targetPosition) - 1]
+		}
+	};
+
+	const activeStep = steps[1].error ? 1 : steps[2].error ? 2 : 3;
+
+	return (
+		<div className='min-h-screen p-8 pb-20 sm:p-20 font-[family-name:var(--font-geist-sans)] flex flex-col items-center justify-center'>
+			<h1 className='text-4xl font-bold'>PNAtor</h1>
+			<p className='text-lg mb-10'>PNator has some tools that are not so bad for analyzing PNA data stuff.</p>
+			<hr className='w-full max-w-2xl border-t border-gray-300 mb-10' />
+			<Step activeStep={activeStep} step={1}>
+				<div className='flex justify-between'>
+					<b>Step 1: Upload or enter your target mRNA data.</b>
+					<input
+						type='file'
+						className='hidden'
+						id='target-mRNA-file'
+						onChange={(e) => setTargetMRNAFile(e.target.files?.[0] ?? null)}
+					/>
+					{targetMRNAFile ? (
+						<button onClick={() => setTargetMRNAFile(null)} className='bg-red-500 text-white py-1 px-2'>
+							Remove
+						</button>
+					) : (
+						<label htmlFor='target-mRNA-file' className='bg-blue-500 text-white py-1 px-2'>
+							Upload
+						</label>
+					)}
+				</div>
+				<textarea
+					id='target-mRNA-data-input'
+					className='w-full p-2 mt-3 h-48 border'
+					spellCheck={false}
+					value={targetMRNAData}
+					placeholder='Enter your mRNA data here...'
+					onChange={(e) => setTargetMRNAData(e.target.value)}
+				/>
+				{targetMRNAData && targetMRNAFile && (
+					<ErrorMessage>You cannot upload and enter data at the same time. Please only do one.</ErrorMessage>
+				)}
+				{mrnaData &&
+					mrnaData.length > 0 &&
+					(!/^[acgtACGT\s]+$/.test(mrnaData) ? (
+						<ErrorMessage>The entered mRNA data should only contain A, C, G, and T nucleotides.</ErrorMessage>
+					) : (
+						<SuccessMessage>Your target mRNA data is valid.</SuccessMessage>
+					))}
+			</Step>
+			<Step activeStep={activeStep} step={2}>
+				<div className='flex justify-between'>
+					<b>Step 2: Enter the target position (1 - {mrnaData.length}).</b>
+					<input
+						type='number'
+						className='py-1 px-2 border w-24'
+						min={1}
+						max={mrnaData.length}
+						value={targetPosition}
+						onChange={(e) => setTargetPosition(e.target.value)}
+					/>
+				</div>
+				{targetPosition && mrnaData[parseInt(targetPosition) - 1] && (
+					<SuccessMessage>
+						The target position is valid. Letter: {mrnaData[parseInt(targetPosition) - 1]}.
+					</SuccessMessage>
+				)}
+				{targetPosition &&
+					(parseInt(targetPosition) < 1 ||
+						isNaN(parseInt(targetPosition)) ||
+						parseInt(targetPosition) > mrnaData.length ||
+						!mrnaData[parseInt(targetPosition) - 1]) && <ErrorMessage>The target position is invalid.</ErrorMessage>}
+			</Step>
+			<Step activeStep={activeStep} step={3}>
+				<div className='flex justify-between'>
+					<b>Step 3: Analyze possible PNA sequences.</b>
+					<button
+						className='bg-blue-500 text-white py-1 px-2'
+						onClick={() => {
+							const possibleSequences = analyzePossiblePNASequences(mrnaData, parseInt(targetPosition));
+							console.log(possibleSequences);
+						}}
+					>
+						Analyze
+					</button>
+				</div>
+			</Step>
+		</div>
+	);
 }
