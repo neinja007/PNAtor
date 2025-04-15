@@ -51,7 +51,7 @@ export default function Home() {
 		}
 	};
 
-	const activeStep = steps[1].error ? 1 : steps[2].error ? 2 : steps[3].error ? 3 : 4;
+	const activeStep = steps[1].error ? 1 : steps[2].error ? 2 : steps[3].error ? 3 : steps[4].error ? 4 : 5;
 
 	return (
 		<div className='min-h-screen p-8 pb-20 sm:p-20 font-[family-name:var(--font-geist-sans)] flex flex-col items-center justify-center'>
