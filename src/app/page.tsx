@@ -13,6 +13,9 @@ export default function Home() {
 	const [loadedFileData, setLoadedFileData] = useState<string>('');
 	const [targetPosition, setTargetPosition] = useState<string>('');
 	const [possibleSequences, setPossibleSequences] = useState<string[]>([]);
+
+	const [validSequences, setValidSequences] = useState<string[]>([]);
+
 	useEffect(() => {
 		if (targetMRNAFile) {
 			targetMRNAFile.text().then(setLoadedFileData);
@@ -23,8 +26,7 @@ export default function Home() {
 
 	const steps = {
 		1: {
-			error:
-				!mrnaData || mrnaData.length === 0 || (targetMRNAData && targetMRNAFile) || !/^[acgtACGT\s]+$/.test(mrnaData)
+			error: !mrnaData || mrnaData.length === 0 || (targetMRNAData && targetMRNAFile) || !/^[acgtACGT]+$/.test(mrnaData)
 		},
 		2: {
 			error:
@@ -41,7 +43,7 @@ export default function Home() {
 		}
 	};
 
-	const activeStep = steps[1].error ? 1 : steps[2].error ? 2 : 3;
+	const activeStep = steps[1].error ? 1 : steps[2].error ? 2 : steps[3].error ? 3 : 4;
 
 	return (
 		<div className='min-h-screen p-8 pb-20 sm:p-20 font-[family-name:var(--font-geist-sans)] flex flex-col items-center justify-center'>
@@ -80,7 +82,7 @@ export default function Home() {
 				)}
 				{mrnaData &&
 					mrnaData.length > 0 &&
-					(!/^[acgtACGT\s]+$/.test(mrnaData) ? (
+					(!/^[acgtACGT]+$/.test(mrnaData) ? (
 						<ErrorMessage>The entered mRNA data should only contain A, C, G, and T nucleotides.</ErrorMessage>
 					) : (
 						<SuccessMessage>Your target mRNA data is valid.</SuccessMessage>
@@ -126,14 +128,15 @@ export default function Home() {
 						{possibleSequences.map((sequence, index) => (
 							<table key={index} className='w-full border-collapse'>
 								<thead>
-									<tr className='border-b last:border-b-0'>
-										<td className='py-1 px-2'>{sequence}</td>
-										<td className='py-1 px-2'>{calculatePnaRnaTm(sequence)}°C</td>
-										<td className='py-1 px-2'>
+									<tr className='border-b last:border-b-0 grid grid-cols-5 py-1'>
+										<td className='col-span-2'>
+											{sequence}{' '}
 											{possibleSequences.filter((s) => s === sequence).length > 1 &&
 												`(duplicate: ${possibleSequences.filter((s) => s === sequence).length})`}
 										</td>
-										<td className='py-1 px-2 text-right'>
+										<td>{sequence.length} bp</td>
+										<td>{calculatePnaRnaTm(sequence)}°C</td>
+										<td className='text-right'>
 											<button
 												className='bg-red-500 text-white px-1'
 												onClick={() => {
@@ -169,6 +172,63 @@ export default function Home() {
 						</ErrorMessage>
 					)}
 				{!steps[3].error && <SuccessMessage>There are {possibleSequences.length} PNA sequences.</SuccessMessage>}
+			</Step>
+			<Step activeStep={activeStep} step={4}>
+				<div className='flex justify-between'>
+					<b>Step 4: Apply PNA sequence constraints.</b>
+				</div>
+				<div className='mt-4'>
+					{possibleSequences.map((sequence, index) => (
+						<table key={index} className='w-full border-collapse'>
+							<thead>
+								<tr className='border-b last:border-b-0 grid grid-cols-8 py-1'>
+									<td className='col-span-2'>{sequence}</td>
+									<td className='col-span-5'>
+										{(() => {
+											const purines = sequence.split('').filter((base) => base === 'A' || base === 'G').length;
+											const purinePercentage = (purines / sequence.length) * 100;
+
+											const purineStretch = sequence.match(/[AG]{7,}/);
+											if (purineStretch) {
+												return (
+													<span className='text-red-500'>long purine stretch ({purineStretch[0].length} bases)</span>
+												);
+											}
+
+											if (purinePercentage > 50) {
+												return <span className='text-orange-500'>high purine content</span>;
+											}
+
+											const gContent = sequence.split('').filter((base) => base === 'G').length;
+											const gPercentage = (gContent / sequence.length) * 100;
+
+											if (gPercentage > 35) {
+												return <span className='text-orange-500'>high G content ({gPercentage.toFixed(1)}%)</span>;
+											}
+
+											return null;
+										})()}
+									</td>
+									<td className='text-right'>
+										<button
+											className='bg-red-500 text-white px-1'
+											onClick={() => {
+												setPossibleSequences(
+													possibleSequences.filter(
+														(s, i) =>
+															!(s === sequence && i === possibleSequences.findIndex((item) => item === sequence))
+													)
+												);
+											}}
+										>
+											Remove
+										</button>
+									</td>
+								</tr>
+							</thead>
+						</table>
+					))}
+				</div>
 			</Step>
 		</div>
 	);
