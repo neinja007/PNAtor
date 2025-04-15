@@ -157,6 +157,7 @@ export default function Home() {
 							</button>
 						</ErrorMessage>
 					)}
+				{!steps[3].error && <SuccessMessage>There are {possibleSequences.length} PNA sequences.</SuccessMessage>}
 			</Step>
 		</div>
 	);
